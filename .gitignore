@@ -1,0 +1,32 @@
+# 编译产物
+*.exe
+*.o
+*.obj
+*.out
+
+# Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.suo
+*.user
+x64/
+x86/
+Debug/
+Release/
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+
+# 系统文件
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# 生成的教学计划数据文件（可选保留，这里排除避免误提交测试数据）
+# plan_data.txt
+# test_*.txt
