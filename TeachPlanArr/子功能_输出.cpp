@@ -47,7 +47,8 @@ static std::string BuildPlanText() {
             const Course& c = courseGraph.courses[semesters[s].courses[i]];
             if (i > 0) line += " ";
             line += std::string(c.courseName) + "(" +
-                    std::to_string(c.credit) + ")";
+                    std::to_string(c.credit) +
+                    (c.isRequired ? ",必" : ",选") + ")";
         }
         if (line.empty()) line = emptyStr;
         if (static_cast<int>(line.size()) > courseColWidth) {
@@ -93,7 +94,8 @@ static std::string BuildPlanText() {
                 const Course& c = courseGraph.courses[semesters[s].courses[i]];
                 if (i > 0) courseStr += " ";
                 courseStr += std::string(c.courseName) + "(" +
-                             std::to_string(c.credit) + ")";
+                             std::to_string(c.credit) +
+                             (c.isRequired ? ",必" : ",选") + ")";
             }
         }
         text += courseStr +
@@ -167,7 +169,7 @@ bool savePlan() {
 //
 //  文件格式：
 //    第 1 行：S L N          学期总数、每学期学分上限、课程数量
-//    第 2 ~ N+1 行：课程代号 学分 所安排学期
+//    第 2 ~ N+1 行：课程代号 学分 所安排学期 是否必修（1=必修 0=选修）
 //    第 N+2 行：先修关系条数 M
 //    后续 M 行：先修课编号 后继课编号
 // ---------------------------------------------------------------------------
@@ -196,7 +198,7 @@ bool savePlanData() {
     for (int i = 0; i < courseGraph.courseCount; ++i) {
         const Course& c = courseGraph.courses[i];
         file << c.courseName << " " << c.credit << " "
-             << c.semester << "\n";
+             << c.semester << " " << c.isRequired << "\n";
     }
 
     // 导出先修关系

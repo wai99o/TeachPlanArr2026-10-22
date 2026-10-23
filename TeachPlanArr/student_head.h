@@ -22,6 +22,7 @@ struct Course {
     int indegree;
     std::vector<int> next;
     int semester;
+    int isRequired;   // 1=必修  0=选修
 };
 
 struct Semester {

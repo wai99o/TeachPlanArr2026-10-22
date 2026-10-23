@@ -49,8 +49,10 @@ bool inputCourses() {
         while (true) {
             std::string code;
             int credit = 0;
+            int isRequired = 1;
 
-            std::cout << "请输入第 " << (i + 1) << " 门课程的代号和学分（例如 C01 2）：";
+            std::cout << "请输入第 " << (i + 1)
+                      << " 门课程的代号、学分和是否必修（例如 C01 2 1，1=必修 0=选修）：";
             if (!(std::cin >> code)) {
                 std::cout << "\n输入结束。\n";
                 return false;
@@ -88,7 +90,22 @@ bool inputCourses() {
                 continue;
             }
 
-            addCourseToGraph(courseGraph, i + 1, code.c_str(), credit, 1);
+            if (!(std::cin >> isRequired)) {
+                if (std::cin.eof()) {
+                    std::cout << "\n输入结束。\n";
+                    return false;
+                }
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                std::cout << "是否必修输入格式错误，请重新输入！\n";
+                continue;
+            }
+            if (isRequired != 0 && isRequired != 1) {
+                std::cout << "错误：是否必修只能为 1（必修）或 0（选修）！\n";
+                continue;
+            }
+
+            addCourseToGraph(courseGraph, i + 1, code.c_str(), credit, isRequired);
             break;
         }
     }

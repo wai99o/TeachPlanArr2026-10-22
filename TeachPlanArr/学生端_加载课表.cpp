@@ -57,9 +57,10 @@ bool loadTeachingPlan(const std::string& filename) {
     for (int i = 0; i < courseCount; ++i) {
         SkipCommentAndBlank(file, line);
         char code[CODE_BUF] = {};
-        int credit = 0, sem = 0;
-        if (sscanf(line.c_str(), "%3s %d %d", code, &credit, &sem) != 3) {
-            std::cerr << "错误：第 " << (i + 2) << " 行课程信息格式应为 '课程编号 学分 学期'\n";
+        int credit = 0, sem = 0, isReq = 1;
+        if (sscanf(line.c_str(), "%3s %d %d %d", code, &credit, &sem, &isReq) != 4) {
+            std::cerr << "错误：第 " << (i + 2)
+                      << " 行课程信息格式应为 '课程编号 学分 学期 是否必修'\n";
             return false;
         }
         if (!IsValidCourseCode(code)) {
@@ -77,6 +78,7 @@ bool loadTeachingPlan(const std::string& filename) {
         CopyCourseId(courses[i].id, code);
         courses[i].credit = credit;
         courses[i].semester = sem;
+        courses[i].isRequired = (isReq != 0) ? 1 : 0;
         courses[i].indegree = 0;
         courses[i].next.clear();
     }
@@ -138,7 +140,8 @@ bool loadTeachingPlan(const std::string& filename) {
         for (std::size_t k = 0; k < semesters[s].courses.size(); ++k) {
             const int idx = semesters[s].courses[k];
             if (k > 0) std::cout << " ";
-            std::cout << courses[idx].id << "(" << courses[idx].credit << ")";
+            std::cout << courses[idx].id << "(" << courses[idx].credit
+                      << (courses[idx].isRequired ? ",必" : ",选") << ")";
         }
         std::cout << "  [学分合计 " << semesters[s].totalCredit << "]\n";
     }

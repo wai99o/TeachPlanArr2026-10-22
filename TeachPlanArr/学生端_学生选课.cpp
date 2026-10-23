@@ -198,14 +198,15 @@ bool manualSelection(Student& stu, int targetSemester) {
             for (int p : prereqList[c]) {
                 if (!stu.passed[p]) { prereqOk = false; break; }
             }
+            const char* typeTag = courses[c].isRequired ? "必修" : "选修";
             if (!prereqOk) {
                 std::cout << "  " << idx++ << ". " << courses[c].id << "(" << courses[c].credit
-                          << ") [先修未满足]\n";
+                          << "," << typeTag << ") [先修未满足]\n";
                 continue;
             }
             candidates.push_back(c);
             std::cout << "  " << idx++ << ". " << courses[c].id << "(" << courses[c].credit
-                      << ") [可选中]\n";
+                      << "," << typeTag << ") [可选中]\n";
         }
     }
     std::cout << "当前该学期已选学分：" << stu.semesterCredit[targetSemester - 1]
@@ -267,6 +268,8 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     switch (style) {
     case SelectionStyle::PreferencePrereq: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
+            if (courses[a].isRequired != courses[b].isRequired)
+                return courses[a].isRequired > courses[b].isRequired;
             int pa = static_cast<int>(prereqList[a].size());
             int pb = static_cast<int>(prereqList[b].size());
             if (pa != pb) return pa < pb;
@@ -276,6 +279,8 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     }
     case SelectionStyle::Balanced: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
+            if (courses[a].isRequired != courses[b].isRequired)
+                return courses[a].isRequired > courses[b].isRequired;
             if (courses[a].credit != courses[b].credit) return courses[a].credit < courses[b].credit;
             return std::string(courses[a].id) < std::string(courses[b].id);
         });
@@ -283,6 +288,8 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     }
     case SelectionStyle::Concentrated: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
+            if (courses[a].isRequired != courses[b].isRequired)
+                return courses[a].isRequired > courses[b].isRequired;
             if (courses[a].credit != courses[b].credit) return courses[a].credit > courses[b].credit;
             return std::string(courses[a].id) < std::string(courses[b].id);
         });
@@ -290,6 +297,8 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     }
     case SelectionStyle::Mixed: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
+            if (courses[a].isRequired != courses[b].isRequired)
+                return courses[a].isRequired > courses[b].isRequired;
             int pa = static_cast<int>(prereqList[a].size());
             int pb = static_cast<int>(prereqList[b].size());
             if (pa != pb) return pa < pb;
@@ -323,7 +332,14 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     case SelectionStyle::Mixed:             tag = "综合型";     break;
     }
     std::cout << "\n自动选课完成（" << tag << "），共 " << picked.size()
-              << " 门，学分合计 " << usedCredit << "\n";
+              << " 门，学分合计 " << usedCredit << "\n  已选课程：";
+    for (std::size_t k = 0; k < picked.size(); ++k) {
+        if (k > 0) std::cout << " ";
+        const int ci = picked[k];
+        std::cout << courses[ci].id << "(" << courses[ci].credit
+                  << (courses[ci].isRequired ? ",必" : ",选") << ")";
+    }
+    std::cout << "\n";
     return true;
 }
 
@@ -424,7 +440,9 @@ bool generateMultiplePlans(Student& stu, int targetSemester, int count,
                   << "，新增学分合计 " << plans[k].totalCredit << "）：";
         for (std::size_t j = 0; j < plans[k].courseIdxs.size(); ++j) {
             if (j > 0) std::cout << " ";
-            std::cout << courses[plans[k].courseIdxs[j]].id;
+            const int ci = plans[k].courseIdxs[j];
+            std::cout << courses[ci].id << "(" << courses[ci].credit
+                      << (courses[ci].isRequired ? ",必" : ",选") << ")";
         }
         std::cout << "\n";
     }
@@ -466,7 +484,8 @@ void printProgressTopo(const Student& stu) {
         }
 
         std::cout << "  " << status << "  " << courses[c].id
-                  << "(" << courses[c].credit << ")  第"
+                  << "(" << courses[c].credit
+                  << (courses[c].isRequired ? ",必" : ",选") << ")  第"
                   << courses[c].semester << "学期  先修：";
         if (prereqList[c].empty()) {
             std::cout << "无";
@@ -491,8 +510,10 @@ void printStudentSchedule(const Student& stu) {
         bool any = false;
         for (int i = 0; i < MAX_COURSE; ++i) {
             if (stu.selected[s][i] != -1) {
-                std::cout << "  " << courses[stu.selected[s][i]].id
-                          << "(" << courses[stu.selected[s][i]].credit << ")";
+                const int ci = stu.selected[s][i];
+                std::cout << "  " << courses[ci].id
+                          << "(" << courses[ci].credit
+                          << (courses[ci].isRequired ? ",必" : ",选") << ")";
                 any = true;
             }
         }
@@ -533,8 +554,10 @@ bool saveStudentPlan(const Student& stu) {
             << stu.semesterCredit[s] << "/" << stu.personalLimit << "）：\n";
         for (int i = 0; i < MAX_COURSE; ++i) {
             if (stu.selected[s][i] != -1) {
-                oss << "  " << courses[stu.selected[s][i]].id
-                    << "(" << courses[stu.selected[s][i]].credit << ")\n";
+                const int ci = stu.selected[s][i];
+                oss << "  " << courses[ci].id
+                    << "(" << courses[ci].credit
+                    << (courses[ci].isRequired ? ",必" : ",选") << ")\n";
                 ++totalPicked;
             }
         }
