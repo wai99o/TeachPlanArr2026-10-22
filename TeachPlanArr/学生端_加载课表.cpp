@@ -32,9 +32,9 @@ bool loadTeachingPlan(const std::string& filename) {
     std::string line;
     SkipCommentAndBlank(file, line);
 
-    int loadedSemCount = 0, loadedCreditLimit = 0, loadedCourseCount = 0;
-    if (sscanf(line.c_str(), "%d %d %d", &loadedSemCount, &loadedCreditLimit, &loadedCourseCount) != 3) {
-        std::cerr << "错误：第1行格式应为 '学期总数 学分上限 课程数量'\n";
+    int loadedSemCount = 0, loadedCreditLimit = 0, loadedReqLimit = 0, loadedElecLimit = 0, loadedCourseCount = 0;
+    if (sscanf(line.c_str(), "%d %d %d %d %d", &loadedSemCount, &loadedCreditLimit, &loadedReqLimit, &loadedElecLimit, &loadedCourseCount) != 5) {
+        std::cerr << "错误：第1行格式应为 '学期总数 总学分上限 必修上限 选修上限 课程数量'\n";
         return false;
     }
     if (loadedSemCount < 1 || loadedSemCount > MAX_SEMESTER) {
@@ -46,21 +46,28 @@ bool loadTeachingPlan(const std::string& filename) {
         return false;
     }
     if (loadedCreditLimit < 1) {
-        std::cerr << "错误：学分上限必须 >= 1\n";
+        std::cerr << "错误：总学分上限必须 >= 1\n";
+        return false;
+    }
+    if (loadedReqLimit < 1 || loadedElecLimit < 1) {
+        std::cerr << "错误：必修/选修学分上限必须 >= 1\n";
         return false;
     }
 
     semesterCount = loadedSemCount;
     creditLimit = loadedCreditLimit;
+    requiredCreditLimit = loadedReqLimit;
+    electiveCreditLimit = loadedElecLimit;
     courseCount = loadedCourseCount;
 
     for (int i = 0; i < courseCount; ++i) {
         SkipCommentAndBlank(file, line);
         char code[CODE_BUF] = {};
+        char name[MAX_NAME_LEN] = {};
         int credit = 0, sem = 0, isReq = 1;
-        if (sscanf(line.c_str(), "%3s %d %d %d", code, &credit, &sem, &isReq) != 4) {
+        if (sscanf(line.c_str(), "%3s %49s %d %d %d", code, name, &credit, &sem, &isReq) != 5) {
             std::cerr << "错误：第 " << (i + 2)
-                      << " 行课程信息格式应为 '课程编号 学分 学期 是否必修'\n";
+                      << " 行课程信息格式应为 '课程代号 课程名称 学分 学期 是否必修'\n";
             return false;
         }
         if (!IsValidCourseCode(code)) {
@@ -76,6 +83,7 @@ bool loadTeachingPlan(const std::string& filename) {
             return false;
         }
         CopyCourseId(courses[i].id, code);
+        std::snprintf(courses[i].name, MAX_NAME_LEN, "%s", name);
         courses[i].credit = credit;
         courses[i].semester = sem;
         courses[i].isRequired = (isReq != 0) ? 1 : 0;
@@ -130,7 +138,9 @@ bool loadTeachingPlan(const std::string& filename) {
 
     std::cout << "课表加载成功！\n";
     std::cout << "  学期总数：" << semesterCount
-              << "，学分上限：" << creditLimit
+              << "，总学分上限：" << creditLimit
+              << "，必修上限：" << requiredCreditLimit
+              << "，选修上限：" << electiveCreditLimit
               << "，课程数量：" << courseCount
               << "，先修关系：" << prereqPairs.size() << " 条\n";
 
@@ -140,7 +150,8 @@ bool loadTeachingPlan(const std::string& filename) {
         for (std::size_t k = 0; k < semesters[s].courses.size(); ++k) {
             const int idx = semesters[s].courses[k];
             if (k > 0) std::cout << " ";
-            std::cout << courses[idx].id << "(" << courses[idx].credit
+            std::cout << courses[idx].id << "-" << courses[idx].name
+                      << "(" << courses[idx].credit
                       << (courses[idx].isRequired ? ",必" : ",选") << ")";
         }
         std::cout << "  [学分合计 " << semesters[s].totalCredit << "]\n";

@@ -1,4 +1,4 @@
-﻿#include "course_system.h"
+#include "course_system.h"
 
 #include <cctype>
 #include <cstdio>
@@ -23,6 +23,8 @@
 // ---------------------------------------------------------------------------
 int semesterCount = 0;
 int creditLimit = 0;
+int requiredCreditLimit = 0;
+int electiveCreditLimit = 0;
 
 CourseGraph courseGraph = {};
 Semester semesters[MAX_SEMESTER] = {};

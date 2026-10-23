@@ -46,7 +46,7 @@ static std::string BuildPlanText() {
         for (std::size_t i = 0; i < semesters[s].courses.size(); ++i) {
             const Course& c = courseGraph.courses[semesters[s].courses[i]];
             if (i > 0) line += " ";
-            line += std::string(c.courseName) + "(" +
+            line += std::string(c.courseName) + "-" + std::string(c.fullName) + "(" +
                     std::to_string(c.credit) +
                     (c.isRequired ? ",必" : ",选") + ")";
         }
@@ -93,7 +93,7 @@ static std::string BuildPlanText() {
             for (std::size_t i = 0; i < semesters[s].courses.size(); ++i) {
                 const Course& c = courseGraph.courses[semesters[s].courses[i]];
                 if (i > 0) courseStr += " ";
-                courseStr += std::string(c.courseName) + "(" +
+                courseStr += std::string(c.courseName) + "-" + std::string(c.fullName) + "(" +
                              std::to_string(c.credit) +
                              (c.isRequired ? ",必" : ",选") + ")";
             }
@@ -168,8 +168,8 @@ bool savePlan() {
 //  导出结构化数据文件（供学生端加载）
 //
 //  文件格式：
-//    第 1 行：S L N          学期总数、每学期学分上限、课程数量
-//    第 2 ~ N+1 行：课程代号 学分 所安排学期 是否必修（1=必修 0=选修）
+//    第 1 行：S L R E N    学期总数、总学分上限、必修上限、选修上限、课程数量
+//    第 2 ~ N+1 行：课程代号 课程名称 学分 所安排学期 是否必修（1=必修 0=选修）
 //    第 N+2 行：先修关系条数 M
 //    后续 M 行：先修课编号 后继课编号
 // ---------------------------------------------------------------------------
@@ -193,11 +193,12 @@ bool savePlanData() {
     }
 
     file << semesterCount << " " << creditLimit << " "
+         << requiredCreditLimit << " " << electiveCreditLimit << " "
          << courseGraph.courseCount << "\n";
 
     for (int i = 0; i < courseGraph.courseCount; ++i) {
         const Course& c = courseGraph.courses[i];
-        file << c.courseName << " " << c.credit << " "
+        file << c.courseName << " " << c.fullName << " " << c.credit << " "
              << c.semester << " " << c.isRequired << "\n";
     }
 

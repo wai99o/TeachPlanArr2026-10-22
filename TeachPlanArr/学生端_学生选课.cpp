@@ -17,12 +17,16 @@ Student::Student() {
     std::memset(id, 0, sizeof(id));
     currentSemester = 1;
     personalLimit = creditLimit;
+    personalRequiredLimit = requiredCreditLimit;
+    personalElectiveLimit = electiveCreditLimit;
     passed.assign(courseCount, false);
     for (int s = 0; s < MAX_SEMESTER; ++s) {
         for (int i = 0; i < MAX_COURSE; ++i) {
             selected[s][i] = -1;
         }
         semesterCredit[s] = 0;
+        semesterRequiredCredit[s] = 0;
+        semesterElectiveCredit[s] = 0;
     }
 }
 
@@ -49,7 +53,8 @@ bool initStudent(Student& stu) {
         return false;
     }
 
-    std::cout << "请输入你个人的每学期学分上限（默认 " << creditLimit << "，直接回车使用默认值）：";
+    // 总学分上限
+    std::cout << "请输入你个人的每学期总学分上限（默认 " << creditLimit << "，直接回车使用默认值）：";
     std::string limStr;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     if (std::getline(std::cin, limStr) && !limStr.empty()) {
@@ -65,17 +70,53 @@ bool initStudent(Student& stu) {
         stu.personalLimit = creditLimit;
     }
 
+    // 必修课学分上限
+    std::cout << "请输入每学期必修课学分上限（默认 " << requiredCreditLimit
+              << "，直接回车使用默认值）：";
+    if (std::getline(std::cin, limStr) && !limStr.empty()) {
+        std::stringstream ss(limStr);
+        int v = 0;
+        if (ss >> v && v >= 1) {
+            stu.personalRequiredLimit = v;
+        } else {
+            std::cout << "输入无效，使用默认值 " << requiredCreditLimit << "\n";
+            stu.personalRequiredLimit = requiredCreditLimit;
+        }
+    } else {
+        stu.personalRequiredLimit = requiredCreditLimit;
+    }
+
+    // 选修课学分上限
+    std::cout << "请输入每学期选修课学分上限（默认 " << electiveCreditLimit
+              << "，直接回车使用默认值）：";
+    if (std::getline(std::cin, limStr) && !limStr.empty()) {
+        std::stringstream ss(limStr);
+        int v = 0;
+        if (ss >> v && v >= 1) {
+            stu.personalElectiveLimit = v;
+        } else {
+            std::cout << "输入无效，使用默认值 " << electiveCreditLimit << "\n";
+            stu.personalElectiveLimit = electiveCreditLimit;
+        }
+    } else {
+        stu.personalElectiveLimit = electiveCreditLimit;
+    }
+
     stu.passed.assign(courseCount, false);
     for (int s = 0; s < MAX_SEMESTER; ++s) {
         for (int i = 0; i < MAX_COURSE; ++i) {
             stu.selected[s][i] = -1;
         }
         stu.semesterCredit[s] = 0;
+        stu.semesterRequiredCredit[s] = 0;
+        stu.semesterElectiveCredit[s] = 0;
     }
 
     std::cout << "学生 " << stu.id << " 信息录入完成\n";
     std::cout << "  当前学期：第 " << stu.currentSemester << " 学期\n";
-    std::cout << "  个人学分上限：" << stu.personalLimit << "\n";
+    std::cout << "  总学分上限：" << stu.personalLimit
+              << "，必修上限：" << stu.personalRequiredLimit
+              << "，选修上限：" << stu.personalElectiveLimit << "\n";
     return true;
 }
 
@@ -157,13 +198,35 @@ bool validateSelection(const Student& stu, int courseIdx, int targetSemester, st
         }
     }
 
+    // 总学分上限检查
     if (stu.semesterCredit[targetSemester - 1] + courses[courseIdx].credit > stu.personalLimit) {
-        reason = "第 " + std::to_string(targetSemester) + " 学期学分 " +
+        reason = "第 " + std::to_string(targetSemester) + " 学期总学分 " +
                  std::to_string(stu.semesterCredit[targetSemester - 1]) +
                  " + 本课 " + std::to_string(courses[courseIdx].credit) +
                  " = " + std::to_string(stu.semesterCredit[targetSemester - 1] + courses[courseIdx].credit) +
-                 " 超过个人上限 " + std::to_string(stu.personalLimit);
+                 " 超过个人总上限 " + std::to_string(stu.personalLimit);
         return false;
+    }
+
+    // 按课程类型分别检查学分上限
+    if (courses[courseIdx].isRequired) {
+        if (stu.semesterRequiredCredit[targetSemester - 1] + courses[courseIdx].credit > stu.personalRequiredLimit) {
+            reason = "第 " + std::to_string(targetSemester) + " 学期必修学分 " +
+                     std::to_string(stu.semesterRequiredCredit[targetSemester - 1]) +
+                     " + 本课 " + std::to_string(courses[courseIdx].credit) +
+                     " = " + std::to_string(stu.semesterRequiredCredit[targetSemester - 1] + courses[courseIdx].credit) +
+                     " 超过必修课上限 " + std::to_string(stu.personalRequiredLimit);
+            return false;
+        }
+    } else {
+        if (stu.semesterElectiveCredit[targetSemester - 1] + courses[courseIdx].credit > stu.personalElectiveLimit) {
+            reason = "第 " + std::to_string(targetSemester) + " 学期选修学分 " +
+                     std::to_string(stu.semesterElectiveCredit[targetSemester - 1]) +
+                     " + 本课 " + std::to_string(courses[courseIdx].credit) +
+                     " = " + std::to_string(stu.semesterElectiveCredit[targetSemester - 1] + courses[courseIdx].credit) +
+                     " 超过选修课上限 " + std::to_string(stu.personalElectiveLimit);
+            return false;
+        }
     }
 
     return true;
@@ -180,6 +243,11 @@ static void commitSelection(Student& stu, int courseIdx, int targetSemester) {
         }
     }
     stu.semesterCredit[targetSemester - 1] += courses[courseIdx].credit;
+    if (courses[courseIdx].isRequired) {
+        stu.semesterRequiredCredit[targetSemester - 1] += courses[courseIdx].credit;
+    } else {
+        stu.semesterElectiveCredit[targetSemester - 1] += courses[courseIdx].credit;
+    }
 }
 
 bool manualSelection(Student& stu, int targetSemester) {
@@ -200,17 +268,23 @@ bool manualSelection(Student& stu, int targetSemester) {
             }
             const char* typeTag = courses[c].isRequired ? "必修" : "选修";
             if (!prereqOk) {
-                std::cout << "  " << idx++ << ". " << courses[c].id << "(" << courses[c].credit
+                std::cout << "  " << idx++ << ". " << courses[c].id << "-" << courses[c].name
+                          << "(" << courses[c].credit
                           << "," << typeTag << ") [先修未满足]\n";
                 continue;
             }
             candidates.push_back(c);
-            std::cout << "  " << idx++ << ". " << courses[c].id << "(" << courses[c].credit
+            std::cout << "  " << idx++ << ". " << courses[c].id << "-" << courses[c].name
+                      << "(" << courses[c].credit
                       << "," << typeTag << ") [可选中]\n";
         }
     }
     std::cout << "当前该学期已选学分：" << stu.semesterCredit[targetSemester - 1]
-              << " / " << stu.personalLimit << "\n";
+              << " / " << stu.personalLimit
+              << "（必修 " << stu.semesterRequiredCredit[targetSemester - 1]
+              << "/" << stu.personalRequiredLimit
+              << "，选修 " << stu.semesterElectiveCredit[targetSemester - 1]
+              << "/" << stu.personalElectiveLimit << "）\n";
 
     std::cout << "\n请输入要选的课程编号（多个用空格分隔，输入 done 结束）：";
     std::string line;
@@ -310,10 +384,19 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
 
     std::vector<int> picked;
     int usedCredit = stu.semesterCredit[targetSemester - 1];
+    int usedReq = stu.semesterRequiredCredit[targetSemester - 1];
+    int usedElec = stu.semesterElectiveCredit[targetSemester - 1];
     for (int c : pool) {
-        if (usedCredit + courses[c].credit <= stu.personalLimit) {
+        const int newTotal = usedCredit + courses[c].credit;
+        const int newReq = usedReq + (courses[c].isRequired ? courses[c].credit : 0);
+        const int newElec = usedElec + (courses[c].isRequired ? 0 : courses[c].credit);
+        if (newTotal <= stu.personalLimit &&
+            newReq <= stu.personalRequiredLimit &&
+            newElec <= stu.personalElectiveLimit) {
             picked.push_back(c);
-            usedCredit += courses[c].credit;
+            usedCredit = newTotal;
+            usedReq = newReq;
+            usedElec = newElec;
         }
     }
 
@@ -336,7 +419,8 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     for (std::size_t k = 0; k < picked.size(); ++k) {
         if (k > 0) std::cout << " ";
         const int ci = picked[k];
-        std::cout << courses[ci].id << "(" << courses[ci].credit
+        std::cout << courses[ci].id << "-" << courses[ci].name
+                  << "(" << courses[ci].credit
                   << (courses[ci].isRequired ? ",必" : ",选") << ")";
     }
     std::cout << "\n";
@@ -374,21 +458,26 @@ bool generateMultiplePlans(Student& stu, int targetSemester, int count,
     }
 
     int minCredit = stu.semesterCredit[targetSemester - 1];
+    int minReq = stu.semesterRequiredCredit[targetSemester - 1];
+    int minElec = stu.semesterElectiveCredit[targetSemester - 1];
     std::vector<std::vector<int>> all;
     std::vector<int> cur;
 
-    std::function<void(int, int)> dfs = [&](int idx, int used) {
-        if (used > stu.personalLimit) return;
+    std::function<void(int, int, int, int)> dfs = [&](int idx, int used, int req, int elec) {
+        if (used > stu.personalLimit || req > stu.personalRequiredLimit || elec > stu.personalElectiveLimit) return;
         if (idx == static_cast<int>(pool.size())) {
             if (!cur.empty() && used >= minCredit) all.push_back(cur);
             return;
         }
-        cur.push_back(pool[idx]);
-        dfs(idx + 1, used + courses[pool[idx]].credit);
+        const int ci = pool[idx];
+        const int addReq = courses[ci].isRequired ? courses[ci].credit : 0;
+        const int addElec = courses[ci].isRequired ? 0 : courses[ci].credit;
+        cur.push_back(ci);
+        dfs(idx + 1, used + courses[ci].credit, req + addReq, elec + addElec);
         cur.pop_back();
-        dfs(idx + 1, used);
+        dfs(idx + 1, used, req, elec);
     };
-    dfs(0, minCredit);
+    dfs(0, minCredit, minReq, minElec);
 
     if (all.empty()) {
         std::cout << "没有满足条件的方案\n";
@@ -441,7 +530,8 @@ bool generateMultiplePlans(Student& stu, int targetSemester, int count,
         for (std::size_t j = 0; j < plans[k].courseIdxs.size(); ++j) {
             if (j > 0) std::cout << " ";
             const int ci = plans[k].courseIdxs[j];
-            std::cout << courses[ci].id << "(" << courses[ci].credit
+            std::cout << courses[ci].id << "-" << courses[ci].name
+                      << "(" << courses[ci].credit
                       << (courses[ci].isRequired ? ",必" : ",选") << ")";
         }
         std::cout << "\n";
@@ -483,7 +573,7 @@ void printProgressTopo(const Student& stu) {
             }
         }
 
-        std::cout << "  " << status << "  " << courses[c].id
+        std::cout << "  " << status << "  " << courses[c].id << "-" << courses[c].name
                   << "(" << courses[c].credit
                   << (courses[c].isRequired ? ",必" : ",选") << ")  第"
                   << courses[c].semester << "学期  先修：";
@@ -505,13 +595,17 @@ void printProgressTopo(const Student& stu) {
 void printStudentSchedule(const Student& stu) {
     std::cout << "\n================ 学生 " << stu.id << " 的选课课表 ================\n";
     for (int s = 0; s < semesterCount; ++s) {
-        std::cout << "第" << (s + 1) << "学期（已选学分 "
-                  << stu.semesterCredit[s] << "/" << stu.personalLimit << "）：\n";
+        std::cout << "第" << (s + 1) << "学期（已选 " << stu.semesterCredit[s]
+                  << "/" << stu.personalLimit
+                  << "，必修 " << stu.semesterRequiredCredit[s]
+                  << "/" << stu.personalRequiredLimit
+                  << "，选修 " << stu.semesterElectiveCredit[s]
+                  << "/" << stu.personalElectiveLimit << "）：\n";
         bool any = false;
         for (int i = 0; i < MAX_COURSE; ++i) {
             if (stu.selected[s][i] != -1) {
                 const int ci = stu.selected[s][i];
-                std::cout << "  " << courses[ci].id
+                std::cout << "  " << courses[ci].id << "-" << courses[ci].name
                           << "(" << courses[ci].credit
                           << (courses[ci].isRequired ? ",必" : ",选") << ")";
                 any = true;
@@ -546,16 +640,22 @@ bool saveStudentPlan(const Student& stu) {
     std::ostringstream oss;
     oss << "========== 学生 " << stu.id << " 的选课课表 ==========\n";
     oss << "当前学期：第 " << stu.currentSemester << " 学期\n";
-    oss << "个人学分上限：" << stu.personalLimit << "\n\n";
+    oss << "总学分上限：" << stu.personalLimit
+        << "，必修上限：" << stu.personalRequiredLimit
+        << "，选修上限：" << stu.personalElectiveLimit << "\n\n";
 
     int totalPicked = 0;
     for (int s = 0; s < semesterCount; ++s) {
-        oss << "第" << (s + 1) << "学期（已选学分 "
-            << stu.semesterCredit[s] << "/" << stu.personalLimit << "）：\n";
+        oss << "第" << (s + 1) << "学期（已选 " << stu.semesterCredit[s]
+            << "/" << stu.personalLimit
+            << "，必修 " << stu.semesterRequiredCredit[s]
+            << "/" << stu.personalRequiredLimit
+            << "，选修 " << stu.semesterElectiveCredit[s]
+            << "/" << stu.personalElectiveLimit << "）：\n";
         for (int i = 0; i < MAX_COURSE; ++i) {
             if (stu.selected[s][i] != -1) {
                 const int ci = stu.selected[s][i];
-                oss << "  " << courses[ci].id
+                oss << "  " << courses[ci].id << "-" << courses[ci].name
                     << "(" << courses[ci].credit
                     << (courses[ci].isRequired ? ",必" : ",选") << ")\n";
                 ++totalPicked;

@@ -17,6 +17,8 @@ namespace StudentApp {
 
 int semesterCount = 0;
 int creditLimit = 0;
+int requiredCreditLimit = 0;
+int electiveCreditLimit = 0;
 int courseCount = 0;
 
 Course courses[MAX_COURSE] = {};

@@ -21,8 +21,18 @@ bool inputBasicInfo() {
         return false;
     }
 
-    if (!ReadInt("请输入每学期学分上限（1 ~ 100）：", 1, 100, creditLimit,
+    if (!ReadInt("请输入每学期总学分上限（1 ~ 100）：", 1, 100, creditLimit,
                  "学分上限输入错误！")) {
+        return false;
+    }
+
+    if (!ReadInt("请输入每学期必修课学分上限（1 ~ 100）：", 1, 100, requiredCreditLimit,
+                 "必修课学分上限输入错误！")) {
+        return false;
+    }
+
+    if (!ReadInt("请输入每学期选修课学分上限（1 ~ 100）：", 1, 100, electiveCreditLimit,
+                 "选修课学分上限输入错误！")) {
         return false;
     }
 
@@ -48,11 +58,12 @@ bool inputCourses() {
     for (int i = 0; i < n; ++i) {
         while (true) {
             std::string code;
+            std::string fullName;
             int credit = 0;
             int isRequired = 1;
 
             std::cout << "请输入第 " << (i + 1)
-                      << " 门课程的代号、学分和是否必修（例如 C01 2 1，1=必修 0=选修）：";
+                      << " 门课程的代号、名称、学分和是否必修（例如 C01 高等数学 2 1，1=必修 0=选修）：";
             if (!(std::cin >> code)) {
                 std::cout << "\n输入结束。\n";
                 return false;
@@ -67,6 +78,17 @@ bool inputCourses() {
             if (FindCourse(code) != -1) {
                 std::cout << "课程代号重复！\n";
                 std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                continue;
+            }
+
+            if (!(std::cin >> fullName)) {
+                if (std::cin.eof()) {
+                    std::cout << "\n输入结束。\n";
+                    return false;
+                }
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                std::cout << "课程名称输入错误，请重新输入！\n";
                 continue;
             }
 
@@ -86,7 +108,15 @@ bool inputCourses() {
                 continue;
             }
             if (credit > creditLimit) {
-                std::cout << "错误：课程 " << code << " 的学分超过每学期学分上限！\n";
+                std::cout << "错误：课程 " << code << " 的学分超过每学期总学分上限！\n";
+                continue;
+            }
+            if (isRequired == 1 && credit > requiredCreditLimit) {
+                std::cout << "错误：必修课 " << code << " 的学分超过每学期必修课学分上限！\n";
+                continue;
+            }
+            if (isRequired == 0 && credit > electiveCreditLimit) {
+                std::cout << "错误：选修课 " << code << " 的学分超过每学期选修课学分上限！\n";
                 continue;
             }
 
@@ -105,7 +135,7 @@ bool inputCourses() {
                 continue;
             }
 
-            addCourseToGraph(courseGraph, i + 1, code.c_str(), credit, isRequired);
+            addCourseToGraph(courseGraph, i + 1, code.c_str(), fullName.c_str(), credit, isRequired);
             break;
         }
     }

@@ -16,8 +16,13 @@ constexpr int MAX_SEMESTER = 10;
 constexpr int CODE_LEN = 3;
 constexpr int CODE_BUF = CODE_LEN + 1;
 
+#ifndef MAX_NAME_LEN
+#define MAX_NAME_LEN 50
+#endif
+
 struct Course {
     char id[CODE_BUF];
+    char name[MAX_NAME_LEN];   // 课程全名（如 "高等数学"）
     int credit;
     int indegree;
     std::vector<int> next;
@@ -33,10 +38,14 @@ struct Semester {
 struct Student {
     char id[CODE_BUF];
     int currentSemester;
-    int personalLimit;
+    int personalLimit;            // 每学期总学分上限（个人设置）
+    int personalRequiredLimit;    // 每学期必修课学分上限（个人设置）
+    int personalElectiveLimit;    // 每学期选修课学分上限（个人设置）
     std::vector<bool> passed;
     int selected[MAX_SEMESTER][MAX_COURSE];
-    int semesterCredit[MAX_SEMESTER];
+    int semesterCredit[MAX_SEMESTER];         // 每学期总已选学分
+    int semesterRequiredCredit[MAX_SEMESTER]; // 每学期已选必修学分
+    int semesterElectiveCredit[MAX_SEMESTER]; // 每学期已选选修学分
 
     Student();
 };
@@ -51,6 +60,8 @@ struct SelectionPlan {
 
 extern int semesterCount;
 extern int creditLimit;
+extern int requiredCreditLimit;
+extern int electiveCreditLimit;
 extern int courseCount;
 extern Course courses[MAX_COURSE];
 extern Semester semesters[MAX_SEMESTER];

@@ -40,7 +40,8 @@ struct EdgeNode {
 // --- 课程结构体 ---
 struct Course {
     int       courseId;       // 课程编号
-    char      courseName[MAX_NAME_LEN]; // 课程名称（教务端存课程代号如 "C01"）
+    char      courseName[MAX_NAME_LEN]; // 课程代号（如 "C01"）
+    char      fullName[MAX_NAME_LEN];   // 课程全名（如 "高等数学"）
     int       credit;         // 学分
     int       isRequired;     // 1=必修  0=选修
     int       inDegree;       // 入度（先修课程数量）
@@ -99,7 +100,9 @@ extern int  electiveCount;
 
 // --- 教务端全局数据 ---
 extern int semesterCount;                 // 学期总数 S
-extern int creditLimit;                   // 每学期学分上限 L
+extern int creditLimit;                   // 每学期学分上限 L（总上限，兼容旧逻辑）
+extern int requiredCreditLimit;           // 每学期必修课学分上限
+extern int electiveCreditLimit;           // 每学期选修课学分上限
 extern CourseGraph courseGraph;           // 课程图（全局唯一）
 extern Semester semesters[MAX_SEMESTER];  // 教学计划
 extern std::vector<int> prereqList[MAX_COURSE]; // 反向邻接表
@@ -128,7 +131,7 @@ void printElectiveArray();                         // 打印选修课列表
 void initGraph(CourseGraph& g, int maxNum);        // 初始化图
 void destroyGraph(CourseGraph& g);                 // 销毁图（释放内存）
 int  addCourseToGraph(CourseGraph& g, int id,      // 图中添加课程
-    const char* name, int credit,
+    const char* code, const char* fullName, int credit,
     int isRequired);
 void addPrerequisite(CourseGraph& g,               // 添加先修关系
     int prereqId, int nextId);

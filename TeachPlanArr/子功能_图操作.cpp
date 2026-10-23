@@ -1,4 +1,4 @@
-﻿#include "course_system.h"
+#include "course_system.h"
 
 #include <cstring>
 #include <iostream>
@@ -44,14 +44,15 @@ void destroyGraph(CourseGraph& g) {
 // ---------------------------------------------------------------------------
 //  向图中添加课程顶点
 // ---------------------------------------------------------------------------
-int addCourseToGraph(CourseGraph& g, int id, const char* name, int credit,
-                     int isRequired) {
+int addCourseToGraph(CourseGraph& g, int id, const char* code, const char* fullName,
+                     int credit, int isRequired) {
     if (g.courseCount >= g.maxCourses) {
         return -1;
     }
     Course& c = g.courses[g.courseCount];
     c.courseId = id;
-    std::snprintf(c.courseName, MAX_NAME_LEN, "%s", name);
+    std::snprintf(c.courseName, MAX_NAME_LEN, "%s", code);
+    std::snprintf(c.fullName, MAX_NAME_LEN, "%s", fullName ? fullName : code);
     c.credit = credit;
     c.isRequired = isRequired;
     c.inDegree = 0;
