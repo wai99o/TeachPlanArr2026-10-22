@@ -256,27 +256,73 @@ bool manualSelection(Student& stu, int targetSemester) {
         return false;
     }
     std::cout << "\n---- 手动选课（第 " << targetSemester << " 学期）----\n";
-    std::cout << "可选课程（专业课表在该学期开设、先修已过、未通过、未选过）：\n";
+
+    // 自动安排必修课（必修课固定，学生不可更改）
+    int autoEnrolled = 0;
+    for (int c : semesters[targetSemester - 1].courses) {
+        if (!courses[c].isRequired) continue;
+        if (stu.passed[c]) continue;
+        // 是否已选过
+        bool already = false;
+        for (int s = 0; s < MAX_SEMESTER && !already; ++s)
+            for (int i = 0; i < MAX_COURSE; ++i)
+                if (stu.selected[s][i] == c) { already = true; break; }
+        if (already) continue;
+        // 先修是否满足
+        bool prereqOk = true;
+        for (int p : prereqList[c]) {
+            if (!stu.passed[p]) { prereqOk = false; break; }
+        }
+        if (!prereqOk) continue;
+        // 学分检查
+        const int newTotal = stu.semesterCredit[targetSemester - 1] + courses[c].credit;
+        const int newReq = stu.semesterRequiredCredit[targetSemester - 1] + courses[c].credit;
+        if (newTotal > stu.personalLimit || newReq > stu.personalRequiredLimit) continue;
+        commitSelection(stu, c, targetSemester);
+        ++autoEnrolled;
+    }
+    if (autoEnrolled > 0) {
+        std::cout << "已自动安排 " << autoEnrolled << " 门必修课（无需手动选择）：\n";
+        for (int c : semesters[targetSemester - 1].courses) {
+            if (!courses[c].isRequired) continue;
+            bool sel = false;
+            for (int i = 0; i < MAX_COURSE; ++i)
+                if (stu.selected[targetSemester - 1][i] == c) { sel = true; break; }
+            if (sel) std::cout << "  " << courses[c].id << "-" << courses[c].name
+                               << "(" << courses[c].credit << ",必修) [已自动选]\n";
+        }
+    }
+
+    std::cout << "\n可选选修课（专业课表在该学期开设、先修已过、未通过、未选过）：\n";
     std::cout << "--------------------------------------------------------------\n";
     int idx = 1;
     std::vector<int> candidates;
     for (int c : semesters[targetSemester - 1].courses) {
+        if (courses[c].isRequired) {
+            // 必修课固定，不可选
+            bool sel = false;
+            for (int i = 0; i < MAX_COURSE; ++i)
+                if (stu.selected[targetSemester - 1][i] == c) { sel = true; break; }
+            std::cout << "  " << idx++ << ". " << courses[c].id << "-" << courses[c].name
+                      << "(" << courses[c].credit
+                      << ",必修) " << (sel ? "[已自动选]" : "[必修·不可选]") << "\n";
+            continue;
+        }
         if (!stu.passed[c]) {
             bool prereqOk = true;
             for (int p : prereqList[c]) {
                 if (!stu.passed[p]) { prereqOk = false; break; }
             }
-            const char* typeTag = courses[c].isRequired ? "必修" : "选修";
             if (!prereqOk) {
                 std::cout << "  " << idx++ << ". " << courses[c].id << "-" << courses[c].name
                           << "(" << courses[c].credit
-                          << "," << typeTag << ") [先修未满足]\n";
+                          << ",选修) [先修未满足]\n";
                 continue;
             }
             candidates.push_back(c);
             std::cout << "  " << idx++ << ". " << courses[c].id << "-" << courses[c].name
                       << "(" << courses[c].credit
-                      << "," << typeTag << ") [可选中]\n";
+                      << ",选修) [可选中]\n";
         }
     }
     std::cout << "当前该学期已选学分：" << stu.semesterCredit[targetSemester - 1]
@@ -286,7 +332,7 @@ bool manualSelection(Student& stu, int targetSemester) {
               << "，选修 " << stu.semesterElectiveCredit[targetSemester - 1]
               << "/" << stu.personalElectiveLimit << "）\n";
 
-    std::cout << "\n请输入要选的课程编号（多个用空格分隔，输入 done 结束）：";
+    std::cout << "\n请输入要选的选修课编号（多个用空格分隔，输入 done 结束）：";
     std::string line;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     if (!std::getline(std::cin, line) || line.empty()) return true;
@@ -299,6 +345,11 @@ bool manualSelection(Student& stu, int targetSemester) {
         int ci = FindCourse(code);
         if (ci == -1) {
             std::cout << "  课程 " << code << " 不存在\n";
+            ++failCount;
+            continue;
+        }
+        if (courses[ci].isRequired) {
+            std::cout << "  " << code << " 是必修课，已自动安排，无需手动选择\n";
             ++failCount;
             continue;
         }
@@ -322,6 +373,7 @@ bool manualSelection(Student& stu, int targetSemester) {
 static std::vector<int> collectOpenCourses(const Student& stu, int targetSemester) {
     std::vector<int> pool;
     for (int c : semesters[targetSemester - 1].courses) {
+        if (courses[c].isRequired) continue;   // 只收集选修课，必修课已自动安排
         if (stu.passed[c]) continue;
         bool prereqOk = true;
         for (int p : prereqList[c]) {
@@ -333,17 +385,35 @@ static std::vector<int> collectOpenCourses(const Student& stu, int targetSemeste
 }
 
 static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style) {
+    // 先自动安排必修课
+    for (int c : semesters[targetSemester - 1].courses) {
+        if (!courses[c].isRequired) continue;
+        if (stu.passed[c]) continue;
+        bool already = false;
+        for (int s = 0; s < MAX_SEMESTER && !already; ++s)
+            for (int i = 0; i < MAX_COURSE; ++i)
+                if (stu.selected[s][i] == c) { already = true; break; }
+        if (already) continue;
+        bool prereqOk = true;
+        for (int p : prereqList[c]) {
+            if (!stu.passed[p]) { prereqOk = false; break; }
+        }
+        if (!prereqOk) continue;
+        const int newTotal = stu.semesterCredit[targetSemester - 1] + courses[c].credit;
+        const int newReq = stu.semesterRequiredCredit[targetSemester - 1] + courses[c].credit;
+        if (newTotal > stu.personalLimit || newReq > stu.personalRequiredLimit) continue;
+        commitSelection(stu, c, targetSemester);
+    }
+
     std::vector<int> pool = collectOpenCourses(stu, targetSemester);
     if (pool.empty()) {
-        std::cout << "第 " << targetSemester << " 学期没有可自动选的课程\n";
+        std::cout << "第 " << targetSemester << " 学期没有可选的选修课\n";
         return false;
     }
 
     switch (style) {
     case SelectionStyle::PreferencePrereq: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
-            if (courses[a].isRequired != courses[b].isRequired)
-                return courses[a].isRequired > courses[b].isRequired;
             int pa = static_cast<int>(prereqList[a].size());
             int pb = static_cast<int>(prereqList[b].size());
             if (pa != pb) return pa < pb;
@@ -353,8 +423,6 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     }
     case SelectionStyle::Balanced: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
-            if (courses[a].isRequired != courses[b].isRequired)
-                return courses[a].isRequired > courses[b].isRequired;
             if (courses[a].credit != courses[b].credit) return courses[a].credit < courses[b].credit;
             return std::string(courses[a].id) < std::string(courses[b].id);
         });
@@ -362,8 +430,6 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     }
     case SelectionStyle::Concentrated: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
-            if (courses[a].isRequired != courses[b].isRequired)
-                return courses[a].isRequired > courses[b].isRequired;
             if (courses[a].credit != courses[b].credit) return courses[a].credit > courses[b].credit;
             return std::string(courses[a].id) < std::string(courses[b].id);
         });
@@ -371,8 +437,6 @@ static bool tryAutoSelect(Student& stu, int targetSemester, SelectionStyle style
     }
     case SelectionStyle::Mixed: {
         std::sort(pool.begin(), pool.end(), [](int a, int b) {
-            if (courses[a].isRequired != courses[b].isRequired)
-                return courses[a].isRequired > courses[b].isRequired;
             int pa = static_cast<int>(prereqList[a].size());
             int pb = static_cast<int>(prereqList[b].size());
             if (pa != pb) return pa < pb;
@@ -451,9 +515,29 @@ static double planDiversity(const SelectionPlan& a, const SelectionPlan& b) {
 
 bool generateMultiplePlans(Student& stu, int targetSemester, int count,
                            std::vector<SelectionPlan>& plans) {
+    // 先自动安排必修课
+    for (int c : semesters[targetSemester - 1].courses) {
+        if (!courses[c].isRequired) continue;
+        if (stu.passed[c]) continue;
+        bool already = false;
+        for (int s = 0; s < MAX_SEMESTER && !already; ++s)
+            for (int i = 0; i < MAX_COURSE; ++i)
+                if (stu.selected[s][i] == c) { already = true; break; }
+        if (already) continue;
+        bool prereqOk = true;
+        for (int p : prereqList[c]) {
+            if (!stu.passed[p]) { prereqOk = false; break; }
+        }
+        if (!prereqOk) continue;
+        const int newTotal = stu.semesterCredit[targetSemester - 1] + courses[c].credit;
+        const int newReq = stu.semesterRequiredCredit[targetSemester - 1] + courses[c].credit;
+        if (newTotal > stu.personalLimit || newReq > stu.personalRequiredLimit) continue;
+        commitSelection(stu, c, targetSemester);
+    }
+
     std::vector<int> pool = collectOpenCourses(stu, targetSemester);
     if (pool.empty()) {
-        std::cout << "第 " << targetSemester << " 学期没有可选课程\n";
+        std::cout << "第 " << targetSemester << " 学期没有可选的选修课\n";
         return false;
     }
 

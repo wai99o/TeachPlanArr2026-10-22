@@ -19,23 +19,36 @@ int adminMain() {
     std::cout << "\n请选择输入方式：\n";
     std::cout << "  1. 手动输入\n";
     std::cout << "  2. 从文件输入\n";
+    std::cout << "（可直接输入文件路径，将自动从文件读取）\n";
 
     int mode = 0;
-    if (!ReadInt("请选择（1 或 2）：", 1, 2, mode, "选择错误，请输入 1 或 2！")) {
+    std::string modeInput;
+    std::cout << "请选择（1 或 2），或直接输入文件名：";
+    if (!(std::cin >> modeInput)) {
+        std::cout << "\n输入结束，程序退出。\n";
         return 1;
+    }
+
+    std::string fileName;
+    if (modeInput == "1") {
+        mode = 1;
+    } else if (modeInput == "2") {
+        mode = 2;
+        std::cout << "请输入数据文件名：";
+        if (!(std::cin >> fileName)) {
+            std::cout << "\n输入结束，程序退出。\n";
+            return 1;
+        }
+    } else {
+        // 用户直接输入了文件路径，当作从文件输入
+        mode = 2;
+        fileName = modeInput;
     }
 
     std::ifstream inputFile;
     std::streambuf* oldCinBuf = nullptr;
 
     if (mode == 2) {
-        std::cout << "请输入数据文件名：";
-        std::string fileName;
-        if (!(std::cin >> fileName)) {
-            std::cout << "\n输入结束，程序退出。\n";
-            return 1;
-        }
-
         inputFile.open(Utf8Path(fileName));
         if (!inputFile) {
             std::cout << "无法打开输入文件：" << fileName << "\n";
