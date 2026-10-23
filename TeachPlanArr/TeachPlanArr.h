@@ -1,2 +1,2 @@
-#pragma once
-#include "head.h"
+﻿#pragma once
+#include "course_system.h"

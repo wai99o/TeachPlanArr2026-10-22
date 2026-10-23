@@ -1,4 +1,4 @@
-#include "head.h"
+﻿#include "course_system.h"
 
 #include <cstring>
 #include <iostream>
