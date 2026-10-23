@@ -27,6 +27,10 @@ Thumbs.db
 .DS_Store
 desktop.ini
 
-# 生成的教学计划数据文件（可选保留，这里排除避免误提交测试数据）
-# plan_data.txt
-# test_*.txt
+# 生成的教学计划数据文件
+plan.txt
+plan_data.txt
+test_*.txt
+
+# 打包文件
+*.zip
