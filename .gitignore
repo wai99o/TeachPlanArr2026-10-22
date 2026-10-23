@@ -31,6 +31,8 @@ desktop.ini
 plan.txt
 plan_data.txt
 test_*.txt
+input_*.txt
+output_*.txt
 
 # 打包文件
 *.zip
