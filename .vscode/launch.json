@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "d:/qq/TeachPlanArr.01/TeachPlanArr",
-      "program": "d:/qq/TeachPlanArr.01/TeachPlanArr/build/Debug/outDebug",
+      "cwd": "d:/qq/TeachPlanArr.01",
+      "program": "d:/qq/TeachPlanArr.01/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
